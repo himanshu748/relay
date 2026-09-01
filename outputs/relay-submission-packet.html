@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relay Submission Packet</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; background: #080e19; color: #f3f0e7; }
+    body { max-width: 860px; margin: 0 auto; padding: 56px 24px 96px; line-height: 1.6; }
+    h1 { font-size: clamp(42px, 8vw, 74px); line-height: .95; letter-spacing: -.04em; }
+    h2 { margin-top: 44px; border-top: 1px solid #2a3749; padding-top: 24px; }
+    .status { padding: 14px 16px; border: 1px solid #765b2d; background: #211a10; color: #ffd18a; }
+    .field { margin: 18px 0; padding: 18px; border: 1px solid #2a3749; background: #0d1421; }
+    .label { color: #75dfbd; font: 700 12px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+    .todo { color: #ffbf69; font-weight: 700; }
+    code { color: #9dc4ff; }
+    a { color: #7fb2ff; }
+  </style>
+</head>
+<body>
+  <p class="label">Sibyl Labs Hackathon · submission packet</p>
+  <h1>Relay</h1>
+  <p class="status"><strong>Submission window open:</strong> the live team page is accepting entries through September 10, 2026 (UTC). Relay still needs a public repo, demo video and two public posts before it can be marked ready for judging.</p>
+
+  <div class="field">
+    <div class="label">Tagline</div>
+    <p>The incident response agent that remembers what failed and changes the next action.</p>
+  </div>
+
+  <div class="field">
+    <div class="label">Builder</div>
+    <p class="todo">TODO: confirm public builder name and any teammates.</p>
+  </div>
+
+  <h2>Project description</h2>
+  <p>Production incidents often outlive the agent session investigating them. When the next responder starts cold, it repeats failed remediation, overlooks operator constraints and wastes the evidence gathered by the previous shift.</p>
+  <p>Relay is a memory-backed incident response agent that carries operational context across sessions. Its demo follows a checkout latency incident where a stateless responder recommends restarting the service. Relay remembers that the restart already failed, a database restart is blocked until a replica snapshot completes and connection-pool exhaustion is the leading hypothesis. It recommends shifting 20% of traffic to a healthy pool and capturing a pool dump instead.</p>
+  <p>Sibyl Memory is on the critical path. WARM entity memory stores the incident, hypotheses, constraints and attempted actions. HOT state stores the active incident plus the latest fresh-session receipt. COLD events keep the audit trail. A new session rebuilds the recommendation from recalled state and exposes the exact memories that changed the action. Remove Sibyl and the product falls back to the failed restart.</p>
+  <p>The working prototype includes a React command interface, FastAPI service, the real <code>sibyl-memory-client</code> local backend and automated tests for recall, persistence plus session continuity. Responders can add live evidence, start a fresh session and verify the resulting journal entries without hidden state.</p>
+  <p>Next, Relay will add production incident connectors, operator approval gates and evaluation traces across a broader set of remediation scenarios.</p>
+
+  <h2>Memory implementation note</h2>
+  <p>Relay persists observations, attempted actions, constraints and hypotheses. At fresh-session start it recalls four decision-relevant memories, computes a recommendation and records a visible session receipt. The recalled failed action plus database constraint block unsafe restarts, while the leading hypothesis changes the diagnostic action.</p>
+
+  <h2>Partner stacks</h2>
+  <p>None claimed. The current build uses Sibyl Memory only.</p>
+
+  <h2>Prior Work declaration</h2>
+  <p>The first Relay prototype was created on August 19, 2026 before the official September 1 to 10 build window. The repository will preserve and disclose that history. Material changes made during the event will remain visible in the public commit history.</p>
+
+  <h2>Required links</h2>
+  <ul>
+    <li><span class="todo">TODO: public GitHub repository under MIT license</span></li>
+    <li>Optional: public hosted demo (recommended, not required by the live submission form)</li>
+    <li><span class="todo">TODO: 2 to 5 minute public demo video</span></li>
+    <li><span class="todo">TODO: public video post tagging @sibylcap</span></li>
+    <li><span class="todo">TODO: public build-log post tagging @sibylcap</span></li>
+  </ul>
+
+  <h2>Demo requirements</h2>
+  <p>Use the 2 minute 40 second script in <code>docs/demo-script.md</code>. Keep the fresh-session recall in one continuous unedited segment with an on-screen UTC timestamp or commit hash.</p>
+</body>
+</html>
