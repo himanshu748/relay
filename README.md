@@ -2,6 +2,8 @@
 
 Relay is a memory-backed incident response agent built for the Sibyl Labs Hackathon. It carries operational evidence across agent sessions, recalls failed actions and operator constraints then shows exactly why its next recommendation changed.
 
+[Run the public demo](https://relay-incident-memory.a-9724.chatgpt.site) · [Inspect the API](https://relay-memory-api.vercel.app/docs)
+
 The included demo follows `INC-204`, a checkout latency spike. A stateless responder repeats a failed service restart. Relay recalls that the restart already failed, a database restart is blocked and connection-pool exhaustion is the leading hypothesis. It recommends a controlled traffic shift plus a connection-pool dump instead.
 
 ## Why this needs Sibyl Memory
@@ -33,7 +35,7 @@ No Base or Virtuals multiplier is claimed in the current build. Relay uses Sibyl
 
 ## Prior Work declaration
 
-The first Relay prototype was created on August 19, 2026 before the official September 1 to 10 build window. This repository will preserve that history and disclose all pre-window work. Material changes made during the event will remain visible in the public commit history.
+The first Relay prototype was created on August 19, 2026 before the official September 1 to 10 build window. The public repository was initialized on September 1, so its first commit contains that disclosed pre-window prototype. Material changes made during the event remain visible in the public commit history.
 
 ## Run locally
 
