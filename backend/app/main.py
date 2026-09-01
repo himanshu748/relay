@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, status
@@ -13,7 +14,13 @@ from backend.app.schemas import (
 from backend.app.services.memory import INCIDENT_ID, IncidentMemory
 
 
-DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "relay-memory.db"
+LOCAL_DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "relay-memory.db"
+DATA_PATH = Path(
+    os.environ.get(
+        "RELAY_DATA_PATH",
+        "/tmp/relay-memory.db" if os.environ.get("VERCEL") else str(LOCAL_DATA_PATH),
+    )
+)
 
 
 def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
@@ -37,6 +44,7 @@ def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
             "http://127.0.0.1:5173",
             "http://terminal.local:4173",
         ],
+        allow_origin_regex=r"https://([a-z0-9-]+\.)*(openai\.site|vercel\.app)",
         allow_credentials=False,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Content-Type", "X-Request-ID"],
@@ -92,4 +100,3 @@ def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
 
 
 app = create_app()
-
