@@ -1,3 +1,14 @@
+[project]
+name = "relay-memory-api"
+version = "0.1.0"
+description = "Sibyl Memory-backed incident response API"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.141.1",
+  "pydantic==2.13.4",
+  "sibyl-memory-client==0.6.1",
+]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["backend/tests"]
