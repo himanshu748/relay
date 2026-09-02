@@ -2,7 +2,7 @@
 
 Relay is a memory-backed incident response agent built for the Sibyl Labs Hackathon. It carries operational evidence across agent sessions, recalls failed actions and operator constraints then shows exactly why its next recommendation changed.
 
-[Run the public demo](https://relay-incident-memory.a-9724.chatgpt.site) · [Inspect the API](https://relay-memory-api.vercel.app/docs)
+[Run the public demo](https://relay-incident-memory.a-9724.chatgpt.site) · [Watch the 2:49 demo](https://cnmlufhna3pivfli.public.blob.vercel-storage.com/relay/demo/relay-demo-e5f59f2.mp4) · [Inspect the API](https://relay-memory-api.vercel.app/docs)
 
 The included demo follows `INC-204`, a checkout latency spike. A stateless responder repeats a failed service restart. Relay recalls that the restart already failed, a database restart is blocked and connection-pool exhaustion is the leading hypothesis. It recommends a controlled traffic shift plus a connection-pool dump instead.
 
@@ -89,6 +89,7 @@ npm run test:sites
 - `docs/architecture.md`: data flow and memory-tier mapping
 - `docs/demo-script.md`: spoken hackathon walkthrough
 - `docs/design-review.md`: rendered QA and improvement loop
+- `video/`: narration source and reproducible ffmpeg render script
 
 ## License
 

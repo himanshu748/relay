@@ -1,0 +1,6 @@
+file '.render/segment-01.mp4'
+file '.render/segment-02.mp4'
+file '.render/segment-03.mp4'
+file '.render/segment-04.mp4'
+file '.render/segment-05.mp4'
+file '.render/segment-06.mp4'

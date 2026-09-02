@@ -1,0 +1,17 @@
+A production incident can outlive the agent session investigating it. When the next responder starts cold, it repeats failed work and ignores constraints the last responder already discovered. Relay gives incident response agents operational memory.
+
+Relay carries observations, attempted actions, hypotheses and operator constraints across sessions. More importantly, it exposes which recalled memories changed the next decision.
+
+This demo follows incident INC-204, a checkout latency spike. A stateless responder proposes restarting checkout API. That action already failed. Relay recalls the failed restart, the database snapshot constraint and the pool exhaustion hypothesis. It chooses a controlled traffic shift and a connection pool dump instead.
+
+The recommendation is not a hard-coded chat response. Relay reads a durable incident entity, active HOT state and COLD event history from Sibyl Memory. Four relevant memories are shown beside the decision, including their tier and source. The failed service restart is blocked because the outcome was no improvement. The primary database restart is blocked because the replica snapshot is still running.
+
+When the operator runs the memory test, Relay creates a genuinely fresh responder session. It recalls the incident before choosing an action, writes a new session receipt and shows the resulting identifier. The earlier failure, live hypothesis and operator constraint survive that session boundary.
+
+The responder can also write new operational evidence while the incident is active. Relay updates the incident entity, appends an auditable journal event and recomputes the visible state. A reset creates a new clean demo epoch without deleting the underlying historical journal.
+
+Sibyl is on the critical path. Without it, Relay loses the failure, constraint and hypothesis, then falls back to the repeated restart. The backend uses the real Sibyl Memory client with SQLite and FTS5. In production, the checkpointed Sibyl database is stored in a private durable Blob and restored before a new serverless instance opens memory. The implementation also rebuilds only Sibyl's derived search index when SQLite tokenizer support differs between runtimes.
+
+This production build is commit e5f59f2. Automated tests cover recall, receipt continuity, live writes, cold-start restoration, private snapshot persistence, tokenizer portability and browser origin access. We also forced a new production deployment and confirmed that a proof observation survived it.
+
+Relay turns incident response from session-bound chat into cumulative operational judgment. The next responder starts where the last one stopped.

@@ -8,6 +8,9 @@ backend/data/*.db-*
 frontend/node_modules/
 frontend/dist/
 work/
+video/.render/
+video/narration.aiff
+video/relay-demo.mp4
 .DS_Store
 .vercel
 .env*.local
