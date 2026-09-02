@@ -16,6 +16,10 @@ FastAPI application
       +--> latest session receipt ---> HOT state
       +--> evidence and outcomes ----> COLD event journal
       |
+      +--> SQLite checkpoint --------> private Vercel Blob
+      |                                  |
+      |<--------- cold-start restore ----+
+      |
       v
 Recommendation engine
       |
@@ -27,6 +31,8 @@ Recommendation engine
 ## Memory model
 
 The durable incident entity is the source for observations, attempted actions, constraints and ranked hypotheses. The HOT active state allows a new responder to regain working context immediately. Each evidence write and fresh-session recall is also written to the COLD journal with a `demo_epoch`, so reset creates a clean demo without deleting historical rows.
+
+Sibyl remains the memory engine and SQLite remains its source of truth. The production adapter checkpoints that database after mutations, uploads it to a private Vercel Blob and restores it before opening Sibyl on a cold start. A compatibility repair rebuilds only Sibyl's derived FTS shadow index when the deployment runtime uses a different SQLite tokenizer, leaving HOT, WARM and COLD rows intact.
 
 `build_memory_trace()` turns the raw memory into four explicit items. `recommend()` consumes the incident and returns the action, confidence, blocked actions and three evidence statements. The UI renders those fields without inventing an extra explanation layer.
 
@@ -41,4 +47,3 @@ The durable incident entity is the source for observations, attempted actions, c
 ## Deliberate hackathon constraints
 
 The recommendation engine is deterministic so judges can see and reproduce the causal effect of memory without requiring an external model key. The integration boundary is narrow enough to replace with an LLM planner later while keeping the same Sibyl-backed evidence model.
-

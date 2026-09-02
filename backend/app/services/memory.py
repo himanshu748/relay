@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+import sqlite3
 from threading import RLock
-from typing import Any
+from typing import Any, Protocol
 from uuid import uuid4
 
 from sibyl_memory_client import MemoryClient
 from sibyl_memory_client.exceptions import NotFoundError
+from vercel.blob import BlobClient, BlobNotFoundError
 
 from backend.app.schemas import (
     Attempt,
@@ -26,6 +28,88 @@ from backend.app.services.recommendation import (
 
 TENANT_ID = "00000000-0000-0000-0000-000000000204"
 INCIDENT_ID = "INC-204"
+
+
+class SnapshotStore(Protocol):
+    def restore(self, database_path: Path) -> bool: ...
+
+    def persist(self, database_path: Path) -> None: ...
+
+
+class BlobSnapshotStore:
+    def __init__(
+        self,
+        token: str,
+        *,
+        client: Any | None = None,
+        blob_path: str = "relay/sibyl-memory.db",
+    ) -> None:
+        self.client = client or BlobClient(token=token)
+        self.blob_path = blob_path
+
+    def restore(self, database_path: Path) -> bool:
+        try:
+            snapshot = self.client.get(
+                self.blob_path,
+                access="private",
+                use_cache=False,
+            )
+        except BlobNotFoundError:
+            return False
+        restore_path = database_path.with_suffix(".restore")
+        restore_path.write_bytes(snapshot.content)
+        restore_path.replace(database_path)
+        return True
+
+    def persist(self, database_path: Path) -> None:
+        self.client.put(
+            self.blob_path,
+            database_path.read_bytes(),
+            access="private",
+            content_type="application/vnd.sqlite3",
+            overwrite=True,
+        )
+
+
+def repair_portable_shadow(database_path: Path) -> bool:
+    """Rebuild Sibyl's derived trigram index when the host tokenizer differs."""
+    with sqlite3.connect(database_path) as connection:
+        try:
+            connection.execute(
+                "SELECT rowid FROM search_shadow "
+                "WHERE search_shadow MATCH 'relay' LIMIT 1"
+            ).fetchone()
+            return False
+        except sqlite3.OperationalError as exc:
+            message = str(exc).lower()
+            if not any(
+                marker in message
+                for marker in (
+                    "error in tokenizer constructor",
+                    "no such tokenizer",
+                    "vtable constructor",
+                )
+            ):
+                raise
+
+        schema_version = connection.execute("PRAGMA schema_version").fetchone()[0]
+        try:
+            connection.execute("PRAGMA writable_schema = ON")
+            connection.execute(
+                "DELETE FROM sqlite_master "
+                "WHERE type = 'trigger' AND instr(sql, 'search_shadow') > 0"
+            )
+            connection.execute(
+                "DELETE FROM sqlite_master "
+                "WHERE type = 'table' "
+                "AND (name = 'search_shadow' OR name GLOB 'search_shadow_*')"
+            )
+            connection.execute(f"PRAGMA schema_version = {schema_version + 1}")
+            connection.execute("PRAGMA user_version = 3")
+            connection.commit()
+        finally:
+            connection.execute("PRAGMA writable_schema = OFF")
+        return True
 
 
 def utc_now() -> str:
@@ -69,12 +153,31 @@ def seed_incident() -> Incident:
 class IncidentMemory:
     """Thin application adapter over Sibyl Memory's entity, state and journal tiers."""
 
-    def __init__(self, database_path: str | Path) -> None:
+    def __init__(
+        self,
+        database_path: str | Path,
+        *,
+        snapshot_store: SnapshotStore | None = None,
+    ) -> None:
         self.path = Path(database_path).expanduser().resolve()
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.snapshot_store = snapshot_store
+        restored = False
+        if self.snapshot_store:
+            restored = self.snapshot_store.restore(self.path)
+        if restored:
+            repair_portable_shadow(self.path)
         self.client = MemoryClient.local(self.path, tenant_id=TENANT_ID)
         self.lock = RLock()
-        self.backend_name = "Sibyl Memory 0.6.1 · local SQLite + FTS5"
+        durability = " · private durable snapshots" if self.snapshot_store else ""
+        self.backend_name = f"Sibyl Memory 0.6.1 · local SQLite + FTS5{durability}"
+
+    def persist_snapshot(self) -> None:
+        if not self.snapshot_store:
+            return
+        with self.client.storage.connection() as connection:
+            connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        self.snapshot_store.persist(self.path)
 
     def get_incident(self, incident_id: str = INCIDENT_ID) -> Incident | None:
         with self.lock:
@@ -129,6 +232,7 @@ class IncidentMemory:
                 extra={"demo_epoch": incident.demo_epoch},
                 ts="2026-08-19T14:05:00Z",
             )
+            self.persist_snapshot()
             return incident
 
     def ensure_seeded(self) -> Incident:
@@ -178,6 +282,7 @@ class IncidentMemory:
                 extra={"demo_epoch": incident.demo_epoch},
                 ts=timestamp,
             )
+            self.persist_snapshot()
             return incident
 
     def journal(self, incident: Incident) -> list[JournalEvent]:
@@ -237,6 +342,7 @@ class IncidentMemory:
                 forward={"next_action": recommendation.action},
                 extra={"demo_epoch": incident.demo_epoch},
             )
+            self.persist_snapshot()
         return session_id
 
     def latest_session_id(self, incident: Incident) -> str | None:

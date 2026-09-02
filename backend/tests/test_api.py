@@ -5,6 +5,24 @@ from fastapi.testclient import TestClient
 from backend.app.main import create_app
 
 
+def test_public_demo_origin_is_allowed_by_cors(tmp_path: Path) -> None:
+    app = create_app(tmp_path / "memory.db")
+    client = TestClient(app)
+
+    response = client.options(
+        "/api/demo",
+        headers={
+            "Origin": "https://relay-incident-memory.a-9724.chatgpt.site",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == (
+        "https://relay-incident-memory.a-9724.chatgpt.site"
+    )
+
+
 def test_fresh_session_recalls_prior_work(tmp_path: Path) -> None:
     app = create_app(tmp_path / "memory.db")
     client = TestClient(app)

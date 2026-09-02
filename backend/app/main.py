@@ -11,7 +11,7 @@ from backend.app.schemas import (
     EventCreate,
     HealthResponse,
 )
-from backend.app.services.memory import INCIDENT_ID, IncidentMemory
+from backend.app.services.memory import BlobSnapshotStore, INCIDENT_ID, IncidentMemory
 
 
 LOCAL_DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "relay-memory.db"
@@ -32,7 +32,9 @@ def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
             "using facts and outcomes recalled from prior sessions."
         ),
     )
-    memory = IncidentMemory(database_path)
+    snapshot_token = os.environ.get("RELAY_READ_WRITE_TOKEN")
+    snapshot_store = BlobSnapshotStore(snapshot_token) if snapshot_token else None
+    memory = IncidentMemory(database_path, snapshot_store=snapshot_store)
     app.state.memory = memory
 
     app.add_middleware(
@@ -43,6 +45,7 @@ def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
             "http://localhost:5173",
             "http://127.0.0.1:5173",
             "http://terminal.local:4173",
+            "https://relay-incident-memory.a-9724.chatgpt.site",
         ],
         allow_origin_regex=r"https://([a-z0-9-]+\.)*(openai\.site|vercel\.app)",
         allow_credentials=False,

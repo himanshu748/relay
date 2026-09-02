@@ -16,7 +16,7 @@ The memory is load-bearing, not decorative:
 - Each fresh session rebuilds the recommendation from recalled memory
 - The UI places the stateless action beside the memory-backed action so the behavioral difference is visible
 
-Relay uses the real [`sibyl-memory-client`](https://docs.sibyllabs.org/memory/integrations) local backend with SQLite and FTS5.
+Relay uses the real [`sibyl-memory-client`](https://docs.sibyllabs.org/memory/integrations) local backend with SQLite and FTS5. In production, each checkpointed Sibyl database is stored in a private Vercel Blob and restored on cold start so memory survives function replacement and redeployment.
 
 ## How memory made this possible
 
@@ -27,6 +27,7 @@ The write and read paths are easy to audit:
 - `backend/app/services/memory.py::add_event` persists new evidence to the incident entity and COLD journal
 - `backend/app/services/memory.py::start_fresh_session` records the new session and its recall receipt
 - `backend/app/services/memory.py::state` rebuilds the current state from Sibyl on every request
+- `backend/app/services/memory.py::persist_snapshot` checkpoints SQLite and writes the database to private durable storage
 - `backend/app/services/recommendation.py::build_memory_trace` turns recalled state into the visible decision trace
 
 ## Partner stacks
@@ -80,7 +81,7 @@ npm run test:sites
 
 ## Project map
 
-- `backend/app/services/memory.py`: Sibyl Memory adapter, seeding, retrieval and journal writes
+- `backend/app/services/memory.py`: Sibyl Memory adapter, durable private snapshots, retrieval and journal writes
 - `backend/app/services/recommendation.py`: deterministic recommendation logic that exposes memory influence
 - `backend/app/main.py`: FastAPI routes
 - `frontend/src/App.jsx`: interaction and evidence UI
