@@ -14,7 +14,7 @@ Primary archetype: Technical instrument.
 
 Secondary influence: Editorial narrative.
 
-Page silhouette: Floating island navigation, asymmetric hero with a large working product frame, open proof bands, a full width tagline reveal, three numbered process rows, focused FAQ and a final live demo invitation.
+Page silhouette: Floating island navigation, asymmetric hero with a large working product frame, open proof bands, a full width tagline reveal, three numbered process rows, an official incident ledger with a deploy-survival receipt, focused FAQ and a final live demo invitation.
 
 Type strategy: Geist throughout, with Geist Mono reserved for incident identifiers, API calls and numeric evidence. Hero uses the supplied white to gray text gradient. All sizes resolve to the supplied Tailwind scale.
 
@@ -35,10 +35,11 @@ Three cliches to avoid: Floating dashboard cards over a glow, a generic three co
 5. Mandatory tagline reveal: “Every failed action becomes the next responder’s starting point.”
 6. How it works in three numbered stages
 7. Full interactive Relay console with fresh session, memory proof and live evidence writing
-8. Technical proof strip with real Sibyl tiers and test status
-9. FAQ with six direct objections
-10. Final CTA that repeats Run the memory test
-11. Footer with documentation, privacy and terms links
+8. Real-world GitHub Actions incident ledger with an official source, isolated Sibyl validation and deploy-survival receipt
+9. Technical proof strip with real Sibyl tiers and test status
+10. FAQ with six direct objections
+11. Final CTA that repeats Run the memory test
+12. Footer with documentation, privacy and terms links
 
 ## Hero copy
 
@@ -48,7 +49,7 @@ Subheadline: Relay gives incident response agents operational memory. A fresh se
 
 Primary CTA: Run the memory test
 
-Proof line: Built on Sibyl Memory with a visible fresh session receipt.
+Proof line: Built on Sibyl Memory, with a direct jump to the real GitHub Actions validation.
 
 ## Benefits
 
@@ -89,3 +90,4 @@ Type B, long form story. The audience needs to see a skeptical claim proven in s
 6. Responsive instrument, preserved through desktop columns and mobile Incident, Memory and Receipt tabs.
 7. Accurate product proof, intentionally corrected from the generated concept so the recommendation, memory tiers, constraints and receipt come from the real backend.
 8. Generated motion slot, deferred because the Higgsfield Seedance endpoint was unavailable to this session. The hero console remains code native and can accept a supporting loop later without changing the layout.
+9. Real-work showcase, added as an official incident fact ledger beside a live Sibyl receipt that becomes green only after the stored validation survives a deployment change.

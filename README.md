@@ -6,6 +6,8 @@ Relay is a memory-backed incident response agent built for the Sibyl Labs Hackat
 
 The included demo follows `INC-204`, a checkout latency spike. A stateless responder repeats a failed service restart. Relay recalls that the restart already failed, a database restart is blocked and connection-pool exhaustion is the leading hypothesis. It recommends a controlled traffic shift plus a connection-pool dump instead.
 
+The live site also runs an isolated validation based on an [official GitHub Actions incident](https://www.githubstatus.com/incidents/y1t7p9fzrlj2). It writes four sourced facts to Sibyl Memory, recalls them into a fresh responder session and displays a receipt that turns green only after the same record is restored by a different production deployment.
+
 ## Why this needs Sibyl Memory
 
 The memory is load-bearing, not decorative:
@@ -65,8 +67,9 @@ Open [http://127.0.0.1:4173](http://127.0.0.1:4173). API documentation is availa
 3. Select **Run the memory test**. Relay creates a new session, recalls four memories and opens the Receipt view.
 4. Move through Incident, Memory and Receipt to show the journal, tiers and fresh session identifier.
 5. Add a live observation in the evidence form and save it.
-6. Point to the new journal event and the preserved receipt.
-7. Select **Reset incident** to restore the clean starting state.
+6. Open **Real-world validation**, inspect the official GitHub Status source and run the isolated recall.
+7. Point out the 4 stored, 4 recalled and 4 journal-event counts plus the restored-after-deploy state.
+8. Select **Reset incident** to restore the clean starting state.
 
 The official 2 to 5 minute submission recording plan is in `docs/demo-script.md`.
 

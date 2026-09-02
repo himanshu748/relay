@@ -24,3 +24,15 @@ The highest impact issues found during rendered inspection were:
 5. A long memory detail could stretch a preview row. Its content wrapper now has a strict minimum width and ellipsis behavior.
 
 Interaction checks covered fresh session recall, receipt selection, evidence persistence, journal updates, reset, mobile navigation, legal routes, the custom missing route and disabled form submission. Browser logs were clean.
+
+## Real-world proof pass
+
+The GitHub Actions validation was inspected again at 360 × 800, 1024 × 900 and 1440 × 900. The section has zero horizontal overflow and recomposes from an evidence ledger plus receipt into a single mobile stack.
+
+The highest impact issues found in this pass were:
+
+1. The real validation was too far below the hero to be discoverable. The hero proof line now links directly to it.
+2. The source label did not establish when the official incident occurred. It now includes the 26 August 2026 incident date.
+3. The production upload included unrelated generated video working files. Sites keeps its validated build unchanged while Vercel now excludes the video directory from API deployments.
+
+The proof control was clicked through the rendered frontend and returned HTTP 200 with four recalled facts. The same validation was then read from a second production deployment with `survived_redeploy: true`.

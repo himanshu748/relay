@@ -28,6 +28,14 @@ const FALLBACK_INCIDENT = {
   attempted_actions: [{ action: "Restart checkout API", result: "no improvement" }],
 };
 
+const REAL_INCIDENT_SOURCE = "https://www.githubstatus.com/incidents/y1t7p9fzrlj2";
+const REAL_INCIDENT_FACTS = [
+  { kind: "observation", recorded_at: "2026-08-26T15:02:00Z", summary: "Database-primary write saturation stopped GitHub Actions jobs from starting and delayed runs while queued load recovered." },
+  { kind: "action", recorded_at: "2026-08-26T15:48:00Z", summary: "A primary failover briefly improved performance but did not fully mitigate the incident." },
+  { kind: "constraint", recorded_at: "2026-08-26T15:54:00Z", summary: "Recovery throttles were raised slowly because the original threshold was about 10% too high and could re-overwhelm the system." },
+  { kind: "hypothesis", recorded_at: "2026-08-26T18:01:00Z", summary: "Growing peak load and burst amplification from an upstream event-processing issue saturated primary writes." },
+];
+
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...(options.headers ?? {}) },
@@ -35,7 +43,9 @@ async function request(path, options = {}) {
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.detail || `Request failed with ${response.status}`);
+    const error = new Error(body.detail || `Request failed with ${response.status}`);
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -47,6 +57,19 @@ function cleanCopy(value = "") {
 function formatTime(value) {
   if (!value) return "Unknown time";
   return new Intl.DateTimeFormat("en", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
+function formatDateTime(value) {
+  if (!value) return "Not run yet";
+  return new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -97,12 +120,12 @@ function SiteNav({ onRun }) {
     <header className="site-header">
       <nav className="nav-pill" aria-label="Main navigation">
         <a href="#top" className="brand-link" aria-label="Relay home" onClick={close}><Brand /></a>
-        <div className="desktop-nav"><a href="#product">Product</a><a href="#proof">Proof</a><a href="#faq">FAQ</a></div>
+        <div className="desktop-nav"><a href="#product">Product</a><a href="#real-world">Proof</a><a href="#faq">FAQ</a></div>
         <button className="nav-action" onClick={onRun}>Run the memory test <span aria-hidden="true">→</span></button>
         <button className={`menu-toggle ${open ? "is-open" : ""}`} aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} aria-controls="mobile-menu" onClick={() => setOpen((value) => !value)}><span /><span /></button>
       </nav>
       <div id="mobile-menu" className={`mobile-menu ${open ? "is-open" : ""}`} aria-hidden={!open}>
-        <a ref={firstLink} href="#product" onClick={close}>Product</a><a href="#proof" onClick={close}>Proof</a><a href="#faq" onClick={close}>FAQ</a>
+        <a ref={firstLink} href="#product" onClick={close}>Product</a><a href="#real-world" onClick={close}>Proof</a><a href="#faq" onClick={close}>FAQ</a>
         <button onClick={() => { close(); onRun(); }}>Run the memory test <span aria-hidden="true">→</span></button>
       </div>
     </header>
@@ -152,7 +175,7 @@ function HeroConsole({ data, loading }) {
 function Hero({ data, loading, onRun }) {
   return (
     <section className="hero page-width" id="top" aria-labelledby="hero-title">
-      <div className="hero-copy" data-reveal><p className="eyebrow">Operational memory for AI responders</p><h1 id="hero-title">The next responder already knows what failed.</h1><p className="hero-subhead">Relay gives incident response agents operational memory. A fresh session recalls failed remediation, operator constraints and live hypotheses before it recommends the next action.</p><button className="primary-action" onClick={onRun}>Run the memory test <span aria-hidden="true">→</span></button><p className="proof-line"><span className="sibyl-mark" aria-hidden="true">S</span><span>Built on <strong>Sibyl Memory</strong> with a visible fresh session receipt.</span></p></div>
+      <div className="hero-copy" data-reveal><p className="eyebrow">Operational memory for AI responders</p><h1 id="hero-title">The next responder already knows what failed.</h1><p className="hero-subhead">Relay gives incident response agents operational memory. A fresh session recalls failed remediation, operator constraints and live hypotheses before it recommends the next action.</p><button className="primary-action" onClick={onRun}>Run the memory test <span aria-hidden="true">→</span></button><a className="proof-line" href="#real-world"><span className="sibyl-mark" aria-hidden="true">S</span><span>Built on <strong>Sibyl Memory</strong>. Inspect the real GitHub Actions validation <span aria-hidden="true">→</span></span></a></div>
       <div className="hero-media" data-reveal><HeroConsole data={data} loading={loading} /></div>
     </section>
   );
@@ -235,6 +258,74 @@ function DemoConsole({ data, loading, error, pending, onRun, onReset, onRetry, o
   );
 }
 
+function RealWorldProof({ validation, loading, pending, error, onRun }) {
+  const facts = validation?.facts?.length ? validation.facts : REAL_INCIDENT_FACTS;
+  const verified = Boolean(validation?.survived_redeploy);
+  const hasReceipt = Boolean(validation);
+
+  return (
+    <section className="real-proof-section page-width" id="real-world" aria-labelledby="real-proof-title">
+      <div className="real-proof-header" data-reveal>
+        <div className="section-intro">
+          <p className="eyebrow">Real-world validation</p>
+          <h2 id="real-proof-title">Tested on an actual GitHub Actions incident.</h2>
+          <p>Relay stores the official incident facts in an isolated Sibyl namespace, starts a fresh responder session and reads the evidence back without changing the checkout demo.</p>
+        </div>
+        <a className="source-link" href={validation?.source_url ?? REAL_INCIDENT_SOURCE} target="_blank" rel="noreferrer">
+          <span className="mono">Official source · 26 Aug 2026</span>
+          <strong>GitHub Status</strong>
+          <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+
+      <div className="real-proof-grid" data-reveal>
+        <article className="source-ledger" aria-labelledby="source-ledger-title">
+          <header className="source-ledger-head">
+            <div><span className="mono">GH-ACTIONS-2026-08-26</span><h3 id="source-ledger-title">Database-primary saturation</h3></div>
+            <span className="source-state"><StatusDot tone="green" />Resolved incident</span>
+          </header>
+          <ol className="real-fact-list">
+            {facts.map((fact, index) => (
+              <li key={`${fact.kind}-${fact.recorded_at}`}>
+                <time className="mono" dateTime={fact.recorded_at}>{formatTime(fact.recorded_at)} UTC</time>
+                <span className={`fact-kind fact-${fact.kind}`}>{fact.kind}</span>
+                <p><span className="mono">0{index + 1}</span>{fact.summary}</p>
+              </li>
+            ))}
+          </ol>
+        </article>
+
+        <article className={`validation-receipt ${verified ? "is-verified" : ""}`} aria-live="polite" aria-busy={loading || pending}>
+          <div className="receipt-kicker"><span className="mono">Sibyl validation receipt</span><span className="live-state"><StatusDot tone={error ? "red" : verified ? "green" : "blue"} />{error ? "Check failed" : loading ? "Reading memory" : verified ? "Restored after deploy" : hasReceipt ? "Live memory" : "Ready to run"}</span></div>
+          <div className="validation-mark" aria-hidden="true">{verified ? "✓" : "↻"}</div>
+          <h3>{verified ? "This real incident survived a full redeploy." : hasReceipt ? "Four real incident facts recalled." : "Run the real incident through Relay."}</h3>
+          <p>{error ?? (verified ? "The originating deployment changed, but the validation entity, fresh-session receipt and COLD journal were restored from the private durable snapshot." : "This writes only to the isolated validation namespace and returns the exact memory receipt produced by the live API.")}</p>
+
+          <dl className="validation-stats">
+            <div><dt>Facts stored</dt><dd>{validation?.facts_stored ?? "–"}</dd></div>
+            <div><dt>Facts recalled</dt><dd>{validation?.facts_recalled ?? "–"}</dd></div>
+            <div><dt>Journal events</dt><dd>{validation?.journal_events ?? "–"}</dd></div>
+          </dl>
+
+          <div className="tier-route" aria-label="Sibyl memory tiers exercised">
+            {(validation?.tiers ?? ["HOT", "WARM", "COLD"]).map((tier, index) => <span key={tier}><MemoryTier tier={tier} />{index < 2 ? <i aria-hidden="true">→</i> : null}</span>)}
+          </div>
+
+          <dl className="receipt-meta">
+            <div><dt>Fresh session</dt><dd className="mono">{validation?.session_id ?? "pending"}</dd></div>
+            <div><dt>Last verified</dt><dd>{formatDateTime(validation?.tested_at)} UTC</dd></div>
+            <div><dt>Backend</dt><dd>{validation?.memory_backend ?? "Sibyl Memory"}</dd></div>
+          </dl>
+
+          <button className="secondary-action validation-action" onClick={onRun} disabled={pending || loading}>
+            {pending ? "Running real incident recall" : hasReceipt ? "Run the validation again" : "Run real incident recall"}
+          </button>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 function ProofSection({ data }) {
   return <section className="proof-section page-width" id="proof" aria-labelledby="proof-title"><div className="section-intro" data-reveal><p className="eyebrow">Technical proof</p><h2 id="proof-title">Memory you can inspect.</h2><p>Relay exposes the state, source and receipt behind every changed decision.</p></div><div className="proof-band" data-reveal><article><span className="proof-index mono">01</span><div><h3>Real Sibyl memory</h3><p>{cleanCopy(data?.memory_backend ?? "Sibyl Memory client")}</p></div></article><article><span className="proof-index mono">02</span><div><h3>Typed evidence ledger</h3><p>Every memory carries a tier, source and incident fact.</p></div></article><article><span className="proof-index mono">03</span><div><h3>Fresh session receipts</h3><p>Each test returns a new identifier and recalled memory count.</p></div></article></div></section>;
 }
@@ -267,6 +358,10 @@ export function App() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState("");
   const [notice, setNotice] = useState("");
+  const [validation, setValidation] = useState(null);
+  const [validationLoading, setValidationLoading] = useState(true);
+  const [validationPending, setValidationPending] = useState(false);
+  const [validationError, setValidationError] = useState("");
   const path = window.location.pathname;
 
   const loadDemo = async () => {
@@ -276,7 +371,17 @@ export function App() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { if (path === "/") loadDemo(); }, [path]);
+  const loadValidation = async () => {
+    setValidationLoading(true); setValidationError("");
+    try { setValidation(await request("/api/validations/github-actions")); }
+    catch (caught) {
+      if (caught.status === 404) setValidation(null);
+      else setValidationError(caught.message);
+    }
+    finally { setValidationLoading(false); }
+  };
+
+  useEffect(() => { if (path === "/") { loadDemo(); loadValidation(); } }, [path]);
   useEffect(() => {
     if (!notice) return undefined;
     const timeout = window.setTimeout(() => setNotice(""), 5200);
@@ -315,6 +420,16 @@ export function App() {
     finally { setPending(""); }
   };
 
+  const runRealValidation = async () => {
+    setValidationPending(true); setValidationError("");
+    try {
+      const receipt = await request("/api/validations/github-actions", { method: "POST" });
+      setValidation(receipt);
+      setNotice(`${receipt.facts_recalled} official incident facts recalled into ${receipt.session_id}.`);
+    } catch (caught) { setValidationError(caught.message); }
+    finally { setValidationPending(false); }
+  };
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#demo">Skip to the working demo</a>
@@ -327,6 +442,7 @@ export function App() {
         <div className="page-width demo-intro" data-reveal><p className="eyebrow">Working prototype</p><h2 id="demo-title">Run the memory test.</h2><p>Start a genuinely fresh session, inspect the recalled evidence and add a new incident fact.</p></div>
         {notice ? <div className="toast" role="status">{notice}</div> : null}
         <div className="page-width"><DemoConsole data={data} loading={loading} error={error} pending={pending} onRun={startFreshSession} onReset={resetDemo} onRetry={loadDemo} onAddEvent={addEvent} /></div>
+        <RealWorldProof validation={validation} loading={validationLoading} pending={validationPending} error={validationError} onRun={runRealValidation} />
         <ProofSection data={data} />
         <FaqSection />
         <FinalCta onRun={startFreshSession} />

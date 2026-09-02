@@ -5,6 +5,7 @@ frontend/node_modules
 frontend/dist
 work
 outputs
+video
 backend/data
 **/__pycache__
 **/*.pyc

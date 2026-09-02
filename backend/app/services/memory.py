@@ -18,6 +18,8 @@ from backend.app.schemas import (
     Hypothesis,
     Incident,
     JournalEvent,
+    ValidationFact,
+    ValidationReceipt,
 )
 from backend.app.services.recommendation import (
     STATELESS_RECOMMENDATION,
@@ -28,6 +30,42 @@ from backend.app.services.recommendation import (
 
 TENANT_ID = "00000000-0000-0000-0000-000000000204"
 INCIDENT_ID = "INC-204"
+GITHUB_ACTIONS_VALIDATION_ID = "GH-ACTIONS-2026-08-26"
+GITHUB_ACTIONS_SOURCE_URL = "https://www.githubstatus.com/incidents/y1t7p9fzrlj2"
+GITHUB_ACTIONS_FACTS = [
+    ValidationFact(
+        kind="observation",
+        summary=(
+            "Database-primary write saturation stopped GitHub Actions jobs from "
+            "starting and delayed runs while queued load recovered."
+        ),
+        recorded_at="2026-08-26T15:02:00Z",
+    ),
+    ValidationFact(
+        kind="action",
+        summary=(
+            "A primary failover briefly improved performance but did not fully "
+            "mitigate the incident."
+        ),
+        recorded_at="2026-08-26T15:48:00Z",
+    ),
+    ValidationFact(
+        kind="constraint",
+        summary=(
+            "Recovery throttles were raised slowly because the original threshold "
+            "was about 10% too high and could re-overwhelm the system."
+        ),
+        recorded_at="2026-08-26T15:54:00Z",
+    ),
+    ValidationFact(
+        kind="hypothesis",
+        summary=(
+            "Growing peak load and burst amplification from an upstream "
+            "event-processing issue saturated primary writes."
+        ),
+        recorded_at="2026-08-26T18:01:00Z",
+    ),
+]
 
 
 class SnapshotStore(Protocol):
@@ -356,6 +394,136 @@ class IncidentMemory:
             return None
         session_id = body.get("session_id")
         return session_id if isinstance(session_id, str) and session_id else None
+
+    def run_github_actions_validation(
+        self,
+        deployment_fingerprint: str,
+    ) -> ValidationReceipt:
+        tested_at = utc_now()
+        run_id = f"github-actions-{uuid4().hex[:8]}"
+        session_id = f"relay-real-{uuid4().hex[:8]}"
+        validation_state_key = f"validation:{GITHUB_ACTIONS_VALIDATION_ID}"
+        with self.lock:
+            try:
+                prior_state = self.client.get_state(validation_state_key)
+            except NotFoundError:
+                prior_state = None
+            prior_body = (prior_state or {}).get("body") or {}
+            origin_deployment = (
+                prior_body.get("origin_deployment") or deployment_fingerprint
+            )
+
+            self.client.set_entity(
+                "validation",
+                GITHUB_ACTIONS_VALIDATION_ID,
+                {
+                    "title": "GitHub Actions database-primary saturation",
+                    "source_name": "GitHub Status",
+                    "source_url": GITHUB_ACTIONS_SOURCE_URL,
+                    "source_published_at": "2026-08-26T18:01:00Z",
+                    "facts": [
+                        fact.model_dump(mode="json")
+                        for fact in GITHUB_ACTIONS_FACTS
+                    ],
+                },
+                status="verified",
+            )
+            self.client.set_state(
+                validation_state_key,
+                {
+                    "session_id": session_id,
+                    "run_id": run_id,
+                    "tested_at": tested_at,
+                    "origin_deployment": origin_deployment,
+                    "latest_deployment": deployment_fingerprint,
+                    "facts_recalled": len(GITHUB_ACTIONS_FACTS),
+                },
+            )
+            for fact in GITHUB_ACTIONS_FACTS:
+                self.client.write_event(
+                    evaluated={
+                        "validation": GITHUB_ACTIONS_VALIDATION_ID,
+                        "kind": fact.kind,
+                        "summary": fact.summary,
+                        "recorded_at": fact.recorded_at,
+                    },
+                    forward={"session_id": session_id},
+                    extra={
+                        "validation_id": GITHUB_ACTIONS_VALIDATION_ID,
+                        "run_id": run_id,
+                        "source_url": GITHUB_ACTIONS_SOURCE_URL,
+                    },
+                    ts=tested_at,
+                )
+            self.persist_snapshot()
+
+        receipt = self.github_actions_validation(deployment_fingerprint)
+        if receipt is None:
+            raise RuntimeError("The real-incident validation receipt was not persisted")
+        return receipt
+
+    def github_actions_validation(
+        self,
+        deployment_fingerprint: str,
+    ) -> ValidationReceipt | None:
+        validation_state_key = f"validation:{GITHUB_ACTIONS_VALIDATION_ID}"
+        with self.lock:
+            try:
+                entity = self.client.get_entity(
+                    "validation",
+                    GITHUB_ACTIONS_VALIDATION_ID,
+                )
+                state = self.client.get_state(validation_state_key)
+            except NotFoundError:
+                return None
+            rows = self.client.read_events(limit=500)
+
+        entity_body = entity.get("body") or {}
+        state_body = state.get("body") or {}
+        facts = [
+            ValidationFact.model_validate(fact)
+            for fact in entity_body.get("facts", [])
+        ]
+        run_id = state_body.get("run_id")
+        journal_events = sum(
+            1
+            for row in rows
+            if (row.get("extra") or {}).get("validation_id")
+            == GITHUB_ACTIONS_VALIDATION_ID
+            and (row.get("extra") or {}).get("run_id") == run_id
+        )
+        origin_deployment = state_body.get("origin_deployment", "local")
+        survived_redeploy = (
+            origin_deployment != "local"
+            and deployment_fingerprint != "local"
+            and origin_deployment != deployment_fingerprint
+        )
+        facts_recalled = min(
+            int(state_body.get("facts_recalled", 0)),
+            len(facts),
+        )
+        return ValidationReceipt(
+            validation_id=GITHUB_ACTIONS_VALIDATION_ID,
+            title=entity_body.get(
+                "title",
+                "GitHub Actions database-primary saturation",
+            ),
+            source_name=entity_body.get("source_name", "GitHub Status"),
+            source_url=entity_body.get("source_url", GITHUB_ACTIONS_SOURCE_URL),
+            source_published_at=entity_body.get(
+                "source_published_at",
+                "2026-08-26T18:01:00Z",
+            ),
+            tested_at=state_body.get("tested_at", utc_now()),
+            session_id=state_body.get("session_id", "relay-real-pending"),
+            facts=facts,
+            facts_stored=len(facts),
+            facts_recalled=facts_recalled,
+            journal_events=journal_events,
+            tiers=["HOT", "WARM", "COLD"],
+            survived_redeploy=survived_redeploy,
+            memory_backend=self.backend_name,
+        )
 
     def state(self, *, fresh_session: bool = False) -> DemoState:
         incident = self.ensure_seeded()

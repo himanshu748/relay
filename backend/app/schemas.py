@@ -75,6 +75,28 @@ class HealthResponse(BaseModel):
     memory_backend: str
 
 
+class ValidationFact(BaseModel):
+    kind: Literal["observation", "action", "constraint", "hypothesis"]
+    summary: str
+    recorded_at: str
+
+
+class ValidationReceipt(BaseModel):
+    validation_id: str
+    title: str
+    source_name: str
+    source_url: str
+    source_published_at: str
+    tested_at: str
+    session_id: str
+    facts: list[ValidationFact]
+    facts_stored: int
+    facts_recalled: int
+    journal_events: int
+    tiers: list[Literal["HOT", "WARM", "COLD"]]
+    survived_redeploy: bool
+    memory_backend: str
+
+
 class ErrorResponse(BaseModel):
     detail: str
-

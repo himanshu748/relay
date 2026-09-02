@@ -10,6 +10,7 @@ from backend.app.schemas import (
     ErrorResponse,
     EventCreate,
     HealthResponse,
+    ValidationReceipt,
 )
 from backend.app.services.memory import BlobSnapshotStore, INCIDENT_ID, IncidentMemory
 
@@ -21,6 +22,14 @@ DATA_PATH = Path(
         "/tmp/relay-memory.db" if os.environ.get("VERCEL") else str(LOCAL_DATA_PATH),
     )
 )
+
+
+def deployment_fingerprint() -> str:
+    return (
+        os.environ.get("VERCEL_URL")
+        or os.environ.get("VERCEL_DEPLOYMENT_ID")
+        or "local"
+    )
 
 
 def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
@@ -85,6 +94,29 @@ def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
     )
     def start_fresh_session() -> DemoState:
         return memory.state(fresh_session=True)
+
+    @app.get(
+        "/api/validations/github-actions",
+        response_model=ValidationReceipt,
+        responses={404: {"model": ErrorResponse}},
+        tags=["validations"],
+    )
+    def get_github_actions_validation() -> ValidationReceipt:
+        receipt = memory.github_actions_validation(deployment_fingerprint())
+        if receipt is None:
+            raise HTTPException(
+                status_code=404,
+                detail="The real-incident validation has not been run yet",
+            )
+        return receipt
+
+    @app.post(
+        "/api/validations/github-actions",
+        response_model=ValidationReceipt,
+        tags=["validations"],
+    )
+    def run_github_actions_validation() -> ValidationReceipt:
+        return memory.run_github_actions_validation(deployment_fingerprint())
 
     @app.post(
         "/api/incidents/{incident_id}/events",
