@@ -249,7 +249,7 @@ class IncidentMemory:
 
     def create_incident(self, payload: IncidentCreate) -> Incident:
         incident = Incident(
-            id=f"INC-{uuid4().hex[:10].upper()}",
+            id=f"INC-{uuid4().hex[:24].upper()}",
             title=payload.title.strip(),
             service=payload.service.strip(),
             severity=payload.severity,
