@@ -29,6 +29,13 @@ class Incident(BaseModel):
     demo_epoch: str
 
 
+class IncidentCreate(BaseModel):
+    title: str = Field(min_length=3, max_length=100)
+    service: str = Field(min_length=2, max_length=80)
+    severity: Literal["SEV-1", "SEV-2", "SEV-3"]
+    impact: str = Field(min_length=3, max_length=280)
+
+
 class Recommendation(BaseModel):
     action: str
     rationale: str

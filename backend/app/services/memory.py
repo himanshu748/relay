@@ -17,6 +17,7 @@ from backend.app.schemas import (
     EventCreate,
     Hypothesis,
     Incident,
+    IncidentCreate,
     JournalEvent,
     ValidationFact,
     ValidationReceipt,
@@ -236,7 +237,7 @@ class IncidentMemory:
                 status=incident.status,
             )
             self.client.set_state(
-                "active_incident",
+                f"active_incident:{incident.id}",
                 {
                     "id": incident.id,
                     "severity": incident.severity,
@@ -246,12 +247,47 @@ class IncidentMemory:
                 },
             )
 
+    def create_incident(self, payload: IncidentCreate) -> Incident:
+        incident = Incident(
+            id=f"INC-{uuid4().hex[:10].upper()}",
+            title=payload.title.strip(),
+            service=payload.service.strip(),
+            severity=payload.severity,
+            status="investigating",
+            started_at=utc_now(),
+            impact=payload.impact.strip(),
+            demo_epoch=str(uuid4()),
+        )
+        with self.lock:
+            self.save_incident(incident)
+            self.client.set_state(
+                f"latest_session:{incident.id}",
+                {
+                    "incident": incident.id,
+                    "session_id": None,
+                    "memories_loaded": 0,
+                    "demo_epoch": incident.demo_epoch,
+                },
+            )
+            self.client.write_event(
+                evaluated={
+                    "incident": incident.id,
+                    "kind": "incident_created",
+                    "summary": f"Opened {incident.title} for {incident.service}",
+                },
+                forward={"impact": incident.impact},
+                extra={"demo_epoch": incident.demo_epoch},
+                ts=incident.started_at,
+            )
+            self.persist_snapshot()
+        return incident
+
     def seed(self) -> Incident:
         with self.lock:
             incident = seed_incident()
             self.save_incident(incident)
             self.client.set_state(
-                "latest_session",
+                f"latest_session:{incident.id}",
                 {
                     "incident": incident.id,
                     "session_id": None,
@@ -362,7 +398,7 @@ class IncidentMemory:
                 },
             )
             self.client.set_state(
-                "latest_session",
+                f"latest_session:{incident.id}",
                 {
                     "incident": incident.id,
                     "session_id": session_id,
@@ -386,7 +422,7 @@ class IncidentMemory:
     def latest_session_id(self, incident: Incident) -> str | None:
         with self.lock:
             try:
-                state = self.client.get_state("latest_session")
+                state = self.client.get_state(f"latest_session:{incident.id}")
             except NotFoundError:
                 return None
         body = (state or {}).get("body") or {}
@@ -525,8 +561,19 @@ class IncidentMemory:
             memory_backend=self.backend_name,
         )
 
-    def state(self, *, fresh_session: bool = False) -> DemoState:
-        incident = self.ensure_seeded()
+    def state(
+        self,
+        incident_id: str = INCIDENT_ID,
+        *,
+        fresh_session: bool = False,
+    ) -> DemoState:
+        incident = (
+            self.ensure_seeded()
+            if incident_id == INCIDENT_ID
+            else self.get_incident(incident_id)
+        )
+        if incident is None:
+            raise KeyError(incident_id)
         if fresh_session:
             session_id = self.start_fresh_session(incident)
         else:

@@ -59,6 +59,96 @@ def test_new_observation_is_persisted(tmp_path: Path) -> None:
     assert payload["journal"][0]["kind"] == "observation"
 
 
+def test_anonymous_workspace_can_be_created_reopened_and_recalled(tmp_path: Path) -> None:
+    app = create_app(tmp_path / "memory.db")
+    client = TestClient(app)
+
+    created = client.post(
+        "/api/incidents",
+        json={
+            "title": "Webhook delivery delay",
+            "service": "events-worker",
+            "severity": "SEV-2",
+            "impact": "Customers receive webhooks more than five minutes late",
+        },
+    )
+    assert created.status_code == 201
+    incident_id = created.json()["incident"]["id"]
+    assert incident_id.startswith("INC-")
+    assert created.json()["recommendation"]["confidence"] == 0.4
+
+    evidence = client.post(
+        f"/api/incidents/{incident_id}/events",
+        json={
+            "kind": "hypothesis",
+            "summary": "The retry queue is saturated",
+            "confidence": 0.82,
+        },
+    )
+    assert evidence.status_code == 200
+    assert "retry queue" in evidence.json()["recommendation"]["action"].lower()
+
+    failed_action = client.post(
+        f"/api/incidents/{incident_id}/events",
+        json={
+            "kind": "action",
+            "summary": "Restarted webhook worker pool",
+            "outcome": "no improvement",
+        },
+    )
+    assert failed_action.status_code == 200
+    assert "retry queue" in failed_action.json()["recommendation"]["action"].lower()
+    assert "checkout traffic" not in failed_action.json()["recommendation"]["action"].lower()
+
+    session = client.post(f"/api/incidents/{incident_id}/sessions")
+    assert session.status_code == 200
+    assert session.json()["is_fresh_session"] is True
+    assert session.json()["session_id"].startswith("relay-")
+
+    reopened = client.get(f"/api/incidents/{incident_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["session_id"] == session.json()["session_id"]
+    assert reopened.json()["incident"]["title"] == "Webhook delivery delay"
+
+
+def test_anonymous_workspaces_are_isolated(tmp_path: Path) -> None:
+    app = create_app(tmp_path / "memory.db")
+    client = TestClient(app)
+    first = client.post(
+        "/api/incidents",
+        json={
+            "title": "Search errors",
+            "service": "search-api",
+            "severity": "SEV-2",
+            "impact": "Search returns errors for some customers",
+        },
+    ).json()
+    second = client.post(
+        "/api/incidents",
+        json={
+            "title": "Email delay",
+            "service": "mailer",
+            "severity": "SEV-3",
+            "impact": "Transactional email is delayed",
+        },
+    ).json()
+
+    client.post(
+        f"/api/incidents/{first['incident']['id']}/events",
+        json={"kind": "observation", "summary": "Errors are isolated to EU traffic"},
+    )
+
+    untouched = client.get(f"/api/incidents/{second['incident']['id']}").json()
+    assert untouched["incident"]["observations"] == []
+    assert all("EU traffic" not in event["summary"] for event in untouched["journal"])
+
+
+def test_unknown_incident_returns_404(tmp_path: Path) -> None:
+    client = TestClient(create_app(tmp_path / "memory.db"))
+    assert client.get("/api/incidents/INC-UNKNOWN").status_code == 404
+    assert client.post("/api/incidents/INC-UNKNOWN/sessions").status_code == 404
+
+
 def test_fresh_session_receipt_survives_later_writes(tmp_path: Path) -> None:
     app = create_app(tmp_path / "memory.db")
     client = TestClient(app)

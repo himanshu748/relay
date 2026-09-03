@@ -4,7 +4,9 @@ Relay is a memory-backed incident response agent built for the Sibyl Labs Hackat
 
 [Run the public demo](https://relay-incident-memory.a-9724.chatgpt.site) · [Watch the 2:49 demo](https://cnmlufhna3pivfli.public.blob.vercel-storage.com/relay/demo/relay-demo-e5f59f2.mp4) · [Inspect the API](https://relay-memory-api.vercel.app/docs)
 
-The included demo follows `INC-204`, a checkout latency spike. A stateless responder repeats a failed service restart. Relay recalls that the restart already failed, a database restart is blocked and connection-pool exhaustion is the leading hypothesis. It recommends a controlled traffic shift plus a connection-pool dump instead.
+Relay is usable without an account. Anyone can create an unlisted incident workspace, record observations, actions, constraints and hypotheses, then reopen the private workspace link in a fresh browser session. Each workspace receives an unguessable ID and there is no public incident directory.
+
+The included demo still follows `INC-204`, a checkout latency spike. A stateless responder repeats a failed service restart. Relay recalls that the restart already failed, a database restart is blocked and connection-pool exhaustion is the leading hypothesis. It recommends a controlled traffic shift plus a connection-pool dump instead.
 
 The live site also runs an isolated validation based on an [official GitHub Actions incident](https://www.githubstatus.com/incidents/y1t7p9fzrlj2). It writes four sourced facts to Sibyl Memory, recalls them into a fresh responder session and displays a receipt that turns green only after the same record is restored by a different production deployment.
 
@@ -64,12 +66,12 @@ Open [http://127.0.0.1:4173](http://127.0.0.1:4173). API documentation is availa
 
 1. Start with the hero claim, then show the stateless restart beside Relay recall.
 2. Read the three evidence rows. They explain what failure, constraint and hypothesis survive the handoff.
-3. Select **Run the memory test**. Relay creates a new session, recalls four memories and opens the Receipt view.
+3. Create an anonymous incident workspace, then copy its unlisted link.
 4. Move through Incident, Memory and Receipt to show the journal, tiers and fresh session identifier.
-5. Add a live observation in the evidence form and save it.
-6. Open **Real-world validation**, inspect the official GitHub Status source and run the isolated recall.
-7. Point out the 4 stored, 4 recalled and 4 journal-event counts plus the restored-after-deploy state.
-8. Select **Reset incident** to restore the clean starting state.
+5. Add a failed action and a hypothesis, then start a fresh session to show the changed recommendation.
+6. Reload the unlisted link to prove the incident reopens without signing in.
+7. Open **Real-world validation**, inspect the official GitHub Status source and run the isolated recall.
+8. Point out the 4 stored, 4 recalled and 4 journal-event counts plus the restored-after-deploy state.
 
 The official 2 to 5 minute submission recording plan is in `docs/demo-script.md`.
 

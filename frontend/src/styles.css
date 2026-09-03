@@ -55,7 +55,8 @@ body {
 
 button,
 input,
-select { font: inherit; }
+select,
+textarea { font: inherit; }
 
 button,
 select,
@@ -601,6 +602,59 @@ code,
 .process-list p { margin: 0; color: var(--text-soft); font-size: 14px; line-height: 1.55; }
 .process-list code { color: var(--text-muted); font-size: 12px; }
 
+.workspace-launcher {
+  padding: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 0.7fr);
+  gap: 48px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  border-radius: 8px;
+  scroll-margin-top: 96px;
+}
+
+.workspace-promise { align-self: center; }
+.workspace-promise h2 { max-width: 620px; margin-bottom: 16px; font-size: 44px; line-height: 1.06; }
+.workspace-promise > p:not(.eyebrow) { max-width: 620px; margin-bottom: 24px; color: var(--text-soft); font-size: 16px; line-height: 1.6; }
+
+.access-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.access-row > span {
+  min-height: 32px;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-soft);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+}
+
+.active-workspace { margin-top: 24px; padding: 16px; display: grid; gap: 8px; background: var(--surface-raised); border: 1px solid var(--green); border-radius: 4px; }
+.active-workspace > span { color: var(--green); font-size: 11px; }
+.active-workspace > strong { font-size: 18px; }
+.active-workspace > div { margin-top: 4px; display: flex; align-items: center; gap: 16px; }
+.text-action { padding: 8px 0; color: var(--text-muted); background: none; border: 0; font-size: 13px; }
+.text-action:hover { color: var(--text); }
+
+.create-workspace-form { padding: 20px; display: grid; gap: 16px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 4px; }
+.form-title { padding-bottom: 16px; display: grid; gap: 6px; border-bottom: 1px solid var(--border); }
+.form-title span { color: var(--blue); font-size: 11px; letter-spacing: 0.1em; }
+.form-title strong { font-size: 20px; }
+.create-workspace-form label { display: grid; gap: 8px; color: var(--text-soft); font-size: 12px; }
+.create-workspace-form input,
+.create-workspace-form select,
+.create-workspace-form textarea { width: 100%; min-height: 42px; padding: 9px 12px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; }
+.create-workspace-form textarea { min-height: 76px; resize: vertical; }
+.create-workspace-form input::placeholder,
+.create-workspace-form textarea::placeholder { color: var(--text-muted); }
+.create-workspace-form small { color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.create-workspace-form .primary-action { width: 100%; }
+.field-pair { display: grid; grid-template-columns: 1fr 140px; gap: 12px; }
+
 .demo-intro { padding: 96px 0 48px; }
 .demo-intro h2 { margin-bottom: 16px; font-size: 48px; }
 .demo-intro > p:last-child { max-width: 640px; margin-bottom: 0; color: var(--text-soft); font-size: 18px; }
@@ -940,6 +994,7 @@ code,
   .decision-panel { grid-column: 1 / -1; min-height: auto; }
   .process-list li { grid-template-columns: 48px minmax(180px, 0.5fr) 1fr; }
   .process-list code { grid-column: 2 / -1; }
+  .workspace-launcher { grid-template-columns: 1fr; gap: 32px; }
   .faq-section { grid-template-columns: 1fr; gap: 32px; }
   .faq-section .section-intro { position: static; }
 }
@@ -979,6 +1034,8 @@ code,
   .process-list li { grid-template-columns: 40px 1fr; gap: 16px; }
   .process-list p,
   .process-list code { grid-column: 2; }
+  .workspace-launcher { padding: 20px; }
+  .workspace-promise h2 { font-size: 36px; }
   .demo-intro { padding-top: 80px; }
   .demo-toolbar { align-items: flex-start; }
   .demo-toolbar > div:first-child { display: grid; gap: 8px; }
@@ -1023,6 +1080,11 @@ code,
   .benefit-row { padding: 16px; }
   .benefit-row code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tagline p { font-size: 36px; }
+  .workspace-launcher { padding: 16px; }
+  .workspace-promise h2 { font-size: 30px; }
+  .field-pair { grid-template-columns: 1fr; }
+  .active-workspace > div { align-items: stretch; flex-direction: column; }
+  .active-workspace .secondary-action { width: 100%; }
   .demo-toolbar { display: grid; }
   .toolbar-actions { grid-template-columns: 1fr; width: 100%; }
   .toolbar-actions button { width: 100%; }

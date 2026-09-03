@@ -10,6 +10,7 @@ from backend.app.schemas import (
     ErrorResponse,
     EventCreate,
     HealthResponse,
+    IncidentCreate,
     ValidationReceipt,
 )
 from backend.app.services.memory import BlobSnapshotStore, INCIDENT_ID, IncidentMemory
@@ -88,12 +89,32 @@ def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
         return memory.state()
 
     @app.post(
-        f"/api/incidents/{INCIDENT_ID}/sessions",
+        "/api/incidents",
         response_model=DemoState,
+        status_code=status.HTTP_201_CREATED,
         tags=["incidents"],
     )
-    def start_fresh_session() -> DemoState:
-        return memory.state(fresh_session=True)
+    def create_incident(payload: IncidentCreate) -> DemoState:
+        incident = memory.create_incident(payload)
+        return memory.state(incident.id)
+
+    @app.get(
+        "/api/incidents/{incident_id}",
+        response_model=DemoState,
+        responses={404: {"model": ErrorResponse}},
+        tags=["incidents"],
+    )
+    def get_incident(incident_id: str) -> DemoState:
+        return memory.state(incident_id)
+
+    @app.post(
+        "/api/incidents/{incident_id}/sessions",
+        response_model=DemoState,
+        responses={404: {"model": ErrorResponse}},
+        tags=["incidents"],
+    )
+    def start_fresh_session(incident_id: str) -> DemoState:
+        return memory.state(incident_id, fresh_session=True)
 
     @app.get(
         "/api/validations/github-actions",
@@ -129,7 +150,7 @@ def create_app(database_path: str | Path = DATA_PATH) -> FastAPI:
             memory.add_event(incident_id, payload)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=f"Incident {incident_id} was not found") from exc
-        return memory.state()
+        return memory.state(incident_id)
 
     return app
 

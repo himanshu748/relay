@@ -63,7 +63,8 @@ def recommend(incident: Incident) -> Recommendation:
     constraints = " ".join(incident.constraints).lower()
     hypotheses = " ".join(item.text for item in incident.hypotheses).lower()
 
-    if "restart" in attempts and (
+    is_checkout_incident = "checkout" in f"{incident.service} {incident.title}".lower()
+    if is_checkout_incident and "restart" in attempts and (
         "failed" in attempts or "no improvement" in attempts
     ):
         blocked = ["Restart checkout-api"]
@@ -98,11 +99,69 @@ def recommend(incident: Incident) -> Recommendation:
             evidence=["Rollback failed in an earlier operator session"],
         )
 
-    return Recommendation(
-        action="Capture a connection-pool dump, then validate saturation by availability zone.",
-        rationale="Relay has not yet observed a failed remediation, so it starts with a reversible diagnostic.",
-        confidence=0.62,
-        blocked_actions=[],
-        evidence=["Checkout latency is elevated", "No completed remediation is recorded"],
+    failed_attempts = [
+        item
+        for item in incident.attempted_actions
+        if any(marker in item.result.lower() for marker in ("failed", "no improvement", "blocked"))
+    ]
+    leading_hypothesis = (
+        max(incident.hypotheses, key=lambda item: item.confidence)
+        if incident.hypotheses
+        else None
     )
+    if failed_attempts:
+        failed = failed_attempts[-1]
+        next_action = (
+            f"Test the leading hypothesis: {leading_hypothesis.text}."
+            if leading_hypothesis
+            else "Capture a new diagnostic that can separate the remaining failure modes."
+        )
+        evidence = [f"{failed.action} produced {failed.result}"]
+        if incident.constraints:
+            evidence.append(f"Operator constraint: {incident.constraints[-1]}")
+        if leading_hypothesis:
+            evidence.append(
+                f"Leading hypothesis is {leading_hypothesis.confidence:.0%} confident"
+            )
+        return Recommendation(
+            action=next_action,
+            rationale=(
+                "Relay ruled out repeating the latest ineffective action and selected "
+                "a reversible diagnostic from the evidence retained across sessions."
+            ),
+            confidence=leading_hypothesis.confidence if leading_hypothesis else 0.66,
+            blocked_actions=[f"Repeat: {failed.action}"],
+            evidence=evidence,
+        )
 
+    if leading_hypothesis:
+        return Recommendation(
+            action=f"Run a reversible check for: {leading_hypothesis.text}.",
+            rationale=(
+                "This is the highest-confidence hypothesis in the incident memory. "
+                "Relay recommends testing it before making an irreversible change."
+            ),
+            confidence=leading_hypothesis.confidence,
+            blocked_actions=[],
+            evidence=[f"Hypothesis confidence: {leading_hypothesis.confidence:.0%}"],
+        )
+
+    if incident.observations:
+        return Recommendation(
+            action="Capture a second observation that narrows the affected component or region.",
+            rationale=(
+                "Relay has an observed symptom but not enough evidence to prefer a "
+                "remediation safely."
+            ),
+            confidence=0.58,
+            blocked_actions=[],
+            evidence=[incident.observations[-1]],
+        )
+
+    return Recommendation(
+        action="Record the first observation before choosing a remediation.",
+        rationale="The workspace is live, but Relay needs incident evidence to ground a safe next action.",
+        confidence=0.4,
+        blocked_actions=[],
+        evidence=["No observations or completed remediations are recorded yet"],
+    )
